@@ -15,6 +15,11 @@
             .refresh-btn { 
                 background: #ffcc00; color: #0044cc; border: none; padding: 8px 12px; 
                 border-radius: 20px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 14px;
+                margin-left: 5px;
+            }
+            .system-btn { 
+                background: #ff4444; color: white; border: none; padding: 8px 12px; 
+                border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px;
             }
             .card { 
                 background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; 
@@ -31,19 +36,42 @@
             .post-btn { background: #1d9bf0; color: white; }
         </style>
         <script>
-            function removeCard(btn) {
-                const card = btn.closest('.card');
-                card.remove();
-            }
-            function reloadPage() {
-                location.reload();
-            }
+            
+    function removeCard(btn) {
+        const card = btn.closest('.card');
+        card.remove();
+    }
+    function reloadPage() {
+        location.reload();
+    }
+
+    async function triggerSystemUpdate() {
+        if(!confirm("GitHubのシステムを強制起動して、最新ニュースを取りに行きますか？")) return;
+        
+        const btn = document.querySelector('.system-btn');
+        const originalText = btn.innerText;
+        btn.innerText = "⏳ 起動中...";
+        btn.disabled = true;
+
+        // 直接Actionsページへ飛ばすか、あるいは特定のURLを叩く
+        // ここにトークンを書くと漏れるので、安全にActionsの実行ページへ誘導します
+        window.open('https://github.com/1059jp/Chuspo-Dragons-Panel/actions/workflows/main.yml', '_blank');
+        
+        alert("GitHubの画面が開きます。\n『Run workflow』ボタンを押して更新してください。");
+        
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+    
         </script>
     </head>
     <body>
         <div class="header">
-            <div style="font-weight:bold;">🐉 中スポ (04/22 01:14)</div>
-            <button onclick="reloadPage()" class="refresh-btn">🔄 更新</button>
+            <div style="font-weight:bold;">🐉 (04/22 01:50)</div>
+            <div>
+                <button onclick="triggerSystemUpdate()" class="system-btn">🚀 システム更新</button>
+                <button onclick="reloadPage()" class="refresh-btn">🔄 更新</button>
+            </div>
         </div>
         <div style="margin-top:15px;">
     <p style='text-align:center; padding:50px; color:#666;'>新着ニュースはありません。</p></div></body></html>
