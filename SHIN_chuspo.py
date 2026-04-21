@@ -3,13 +3,16 @@ from bs4 import BeautifulSoup
 import datetime
 import os
 import re
+import json
 import urllib.parse
 from datetime import timedelta, timezone
 
 # --- 設定 ---
 HISTORY_FILE = "CHUSPO_history.txt"
+STOCK_FILE = "CHUSPO_stock.json"
 
 def build_summary(title):
+    # 余計な装飾をカット
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
     return f"{text}\n\n#dragons #中日スポーツ"
 
@@ -30,35 +33,44 @@ def get_chuspo_news():
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # ページ内のすべてのリンクをチェック
+        # --- 【最強の狙い撃ちルール】 ---
+        # 1. ページ内の全リンクから、中日スポーツの記事形式（/article/数字）をすべて探す
         all_links = soup.find_all('a', href=True)
         
+        new_entries = []
         seen_hrefs = set()
 
         for a in all_links:
             href = a.get('href')
-            # 記事URL（数字7桁以上）の形式だけを確認
-            if not re.search(r'/article/\d{7,}', href):
+            # 送っていただいた例の形式「/article/8桁前後の数字」を正規表現で探す
+            if not re.search(r'/article/\d{6,}', href):
                 continue
                 
             full_url = urllib.parse.urljoin(url, href)
             if full_url in seen_hrefs: continue
             
-            # 見出しを取得（aタグ内のテキストを結合）
-            title = a.get_text(strip=True)
+            # 見出しを取得（aタグの中身、または直近のテキスト）
+            title = a.get_text().strip()
             
-            # 【重要】ゴミデータを弾く（短すぎるものや固定メニュー）
-            if len(title) < 20 or any(word in title for word in ["お問い合わせ", "利用規約", "ガイド"]):
+            # 短すぎる文字（「もっと見る」やメニュー）を徹底排除
+            if len(title) < 20: 
                 continue
 
-            # 取得したものをすべてストックに入れる（日付判定はしない）
-            stock.append({"summary": build_summary(title), "url": full_url})
-            seen_hrefs.add(full_url)
+            # 重複チェック
+            if title not in history and full_url not in history:
+                summary_text = build_summary(title)
+                stock.insert(0, {"summary": summary_text, "url": full_url})
+                new_entries.extend([title, full_url])
+                history.extend([title, full_url])
+                seen_hrefs.add(full_url)
+
+        if new_entries:
+            with open(HISTORY_FILE, "a", encoding="utf-8") as f:
+                for entry in new_entries: f.write(entry + "\n")
                 
     except Exception as e:
         print(f"Error: {e}")
     
-    # 見つかった順に最大20件を返す（通常はこれが最新順になります）
     return stock[:20]
 
 def create_html(news_list):
@@ -99,7 +111,7 @@ def create_html(news_list):
             </div>
         """
     if not news_list:
-        html_content += "<p style='text-align:center; padding:50px; color:#666;'>ニュースを読み込めませんでした。</p>"
+        html_content += "<p style='text-align:center; padding:50px; color:#666;'>新着ニュースはありません。</p>"
     html_content += "</div></body></html>"
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
