@@ -1,0 +1,31 @@
+name: Chuspo News Auto Panel  # ← ここがActionsタブでの表示名になります
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+      
+      - name: Run Python Script
+        run: python SHIN_chuspo.py  # ← ここを必ず「SHIN_chuspo.py」に合わせます！
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Update chuspo news" || true
+          git push
