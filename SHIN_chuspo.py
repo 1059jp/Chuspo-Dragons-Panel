@@ -13,7 +13,7 @@ STOCK_FILE = "CHUSPO_stock.json"  # 未処理分を保存するファイル
 
 def build_summary(title):
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
-    return f"{text}\n\n#dragons #中日スポーツ"
+    return f"{text}\n\n#dragons #中日ドラゴンズ"
 
 def get_chuspo_news():
     url = "https://www.chunichi.co.jp/chuspo/dragons"
