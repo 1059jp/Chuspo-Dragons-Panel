@@ -11,6 +11,13 @@ from datetime import timedelta, timezone
 HISTORY_FILE = "CHUSPO_history.txt"
 STOCK_FILE = "CHUSPO_stock.json"
 
+# --- セキュリティ設定（GitHub Secretsから読み込み） ---
+# 公開リポジトリでも安全なように、直接書かずに環境変数から取得します
+MY_TOKEN = os.environ.get("MY_GITHUB_TOKEN", "")
+OWNER = "あなたのGitHubユーザー名" # ここだけ書き換えてください
+REPO = "あなたのリポジトリ名"   # ここだけ書き換えてください
+WORKFLOW_FILE = "main.yml" 
+
 def build_summary(title):
     # 余計な装飾をカット
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
@@ -98,6 +105,11 @@ def create_html(news_list):
             .refresh-btn {{ 
                 background: #ffcc00; color: #0044cc; border: none; padding: 8px 12px; 
                 border-radius: 20px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 14px;
+                margin-left: 5px;
+            }}
+            .system-btn {{ 
+                background: #ff4444; color: white; border: none; padding: 8px 12px; 
+                border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px;
             }}
             .card {{ 
                 background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; 
@@ -121,12 +133,47 @@ def create_html(news_list):
             function reloadPage() {{
                 location.reload();
             }}
+
+            async function triggerSystemUpdate() {{
+                if(!confirm("GitHubのシステムを強制起動して、最新ニュースを取りに行きますか？")) return;
+                
+                const btn = document.querySelector('.system-btn');
+                const originalText = btn.innerText;
+                btn.innerText = "⏳ 起動中...";
+                btn.disabled = true;
+
+                try {{
+                    const response = await fetch('https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows/{WORKFLOW_FILE}/dispatches', {{
+                        method: 'POST',
+                        headers: {{
+                            'Authorization': 'Bearer {MY_TOKEN}',
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        }},
+                        body: JSON.stringify({{ ref: 'main' }})
+                    }});
+
+                    if (response.status === 204) {{
+                        alert("システムを起動しました！\\n裏でニュース取得が始まります。1〜2分待ってから「🔄 更新」を押してください。");
+                    }} else {{
+                        alert("エラーが発生しました。設定（Secrets）を確認してください。");
+                    }}
+                } catch (e) {{
+                    alert("通信エラーが発生しました。");
+                }} finally {{
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }}
+            }
         </script>
     </head>
     <body>
         <div class="header">
-            <div style="font-weight:bold;">🐉 中スポ ({now})</div>
-            <button onclick="reloadPage()" class="refresh-btn">🔄 更新</button>
+            <div style="font-weight:bold;">🐉 ({now})</div>
+            <div>
+                <button onclick="triggerSystemUpdate()" class="system-btn">🚀 システム更新</button>
+                <button onclick="reloadPage()" class="refresh-btn">🔄 更新</button>
+            </div>
         </div>
         <div style="margin-top:15px;">
     """
