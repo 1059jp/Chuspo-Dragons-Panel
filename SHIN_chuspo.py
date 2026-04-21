@@ -13,14 +13,12 @@ STOCK_FILE = "CHUSPO_stock.json"
 
 # --- セキュリティ設定（GitHub Secretsから読み込み） ---
 MY_TOKEN = os.environ.get("MY_GITHUB_TOKEN", "")
-OWNER = "1059jp"  # あなたのユーザー名
-REPO = "Chuspo-Dragons-Panel"   # あなたのリポジトリ名
+OWNER = "1059jp"
+REPO = "Chuspo-Dragons-Panel"
 WORKFLOW_FILE = "main.yml" 
 
 def build_summary(title):
-    # 余計な装飾をカット
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
-    # ハッシュタグを #dragons #中日ドラゴンズ に変更
     return f"{text}\n\n#dragons #中日ドラゴンズ"
 
 def get_chuspo_news():
@@ -87,6 +85,49 @@ def create_html(news_list):
     JST = timezone(timedelta(hours=+9), 'JST')
     now = datetime.datetime.now(JST).strftime('%m/%d %H:%M')
     
+    # JavaScriptのテンプレート部分（干渉を防ぐため別出し）
+    js_code = """
+    function removeCard(btn) {
+        const card = btn.closest('.card');
+        card.remove();
+    }
+    function reloadPage() {
+        location.reload();
+    }
+
+    async function triggerSystemUpdate() {
+        if(!confirm("GitHubのシステムを強制起動して、最新ニュースを取りに行きますか？")) return;
+        
+        const btn = document.querySelector('.system-btn');
+        const originalText = btn.innerText;
+        btn.innerText = "⏳ 起動中...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('https://api.github.com/repos/""" + OWNER + "/" + REPO + """/actions/workflows/""" + WORKFLOW_FILE + """/dispatches', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer """ + MY_TOKEN + """',
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ ref: 'main' })
+            });
+
+            if (response.status === 204) {
+                alert("システムを起動しました！\\n裏でニュース取得が始まります。1〜2分待ってから「🔄 更新」を押してください。");
+            } else {
+                alert("エラーが発生しました。設定（Secrets）を確認してください。");
+            }
+        } catch (e) {
+            alert("通信エラーが発生しました。");
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+    """
+    
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ja">
@@ -125,45 +166,7 @@ def create_html(news_list):
             .post-btn {{ background: #1d9bf0; color: white; }}
         </style>
         <script>
-            function removeCard(btn) {{
-                const card = btn.closest('.card');
-                card.remove();
-            }}
-            function reloadPage() {{
-                location.reload();
-            }}
-
-            async function triggerSystemUpdate() {{
-                if(!confirm("GitHubのシステムを強制起動して、最新ニュースを取りに行きますか？")) return;
-                
-                const btn = document.querySelector('.system-btn');
-                const originalText = btn.innerText;
-                btn.innerText = "⏳ 起動中...";
-                btn.disabled = true;
-
-                try {{
-                    const response = await fetch('https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows/{WORKFLOW_FILE}/dispatches', {{
-                        method: 'POST',
-                        headers: {{
-                            'Authorization': 'Bearer {MY_TOKEN}',
-                            'Accept': 'application/vnd.github.v3+json',
-                            'Content-Type': 'application/json'
-                        }},
-                        body: JSON.stringify({{ ref: 'main' }})
-                    }});
-
-                    if (response.status === 204) {{
-                        alert("システムを起動しました！\\n裏でニュース取得が始まります。1〜2分待ってから「🔄 更新」を押してください。");
-                    }} else {{
-                        alert("エラーが発生しました。設定（Secrets）を確認してください。");
-                    }}
-                }} catch (e) {{
-                    alert("通信エラーが発生しました。");
-                }} finally {{
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                }}
-            }
+            {js_code}
         </script>
     </head>
     <body>
