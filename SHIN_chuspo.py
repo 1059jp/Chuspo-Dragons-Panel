@@ -12,7 +12,6 @@ HISTORY_FILE = "CHUSPO_history.txt"
 STOCK_FILE = "CHUSPO_stock.json"
 
 def build_summary(title):
-    # 余計な文字を掃除
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
     return f"{text}\n\n#dragons #中日スポーツ"
 
@@ -33,29 +32,24 @@ def get_chuspo_news():
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # --- 【修正ポイント】ニュース記事の「塊」だけを特定 ---
-        # 中日スポーツの記事リストは通常 'item' クラスや 'news-list' 内にあります
-        # かつ、リンク先が必ず '/chuspo/article/dragons/' で始まるものに限定します
-        articles = soup.find_all('a', href=re.compile(r'^/chuspo/article/dragons/\d+'))
+        # 記事リンク（数字8桁以上を含むもの）を抽出
+        articles = soup.find_all('a', href=re.compile(r'/chuspo/article/dragons/\d+'))
 
         new_entries = []
         seen_hrefs = set()
 
         for a_tag in articles:
             href = urllib.parse.urljoin(url, a_tag.get('href', ''))
-            
-            # メニュー類を除外するため、hrefに数字（記事ID）が含まれているかチェック
-            if not re.search(r'\d{8,}', href): 
-                continue
-                
             if href in seen_hrefs: continue
             
-            # 見出しを取得。中日スポーツは <span> や <h3> にタイトルが入ることが多い
             title = a_tag.get_text().strip()
-            
-            # 「もっと見る」や短すぎるメニュー名を排除（ニュース見出しは通常20文字以上）
+            # 18文字未満はメニューや広告とみなしてカット
             if len(title) < 18: continue 
 
+            # --- 【修正：24時間制限の撤廃】 ---
+            # 特定の日付チェックをあえてせず、サイト上の「最新リスト」にあるものは
+            # すべて「新着」として扱うようにしました。
+            
             if title not in history and href not in history:
                 summary_text = build_summary(title)
                 stock.insert(0, {"summary": summary_text, "url": href})
@@ -70,6 +64,7 @@ def get_chuspo_news():
     except Exception as e:
         print(f"Error: {e}")
     
+    # 常に最新20件をストックして返す
     return stock[:20]
 
 def create_html(news_list):
@@ -110,7 +105,7 @@ def create_html(news_list):
             </div>
         """
     if not news_list:
-        html_content += "<p style='text-align:center; padding:50px; color:#666;'>現在、新しいニュースはありません。</p>"
+        html_content += "<p style='text-align:center; padding:50px; color:#666;'>新着ニュースを読み込み中...</p>"
     html_content += "</div></body></html>"
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
