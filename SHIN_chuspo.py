@@ -3,15 +3,19 @@ from bs4 import BeautifulSoup
 import datetime
 import os
 import re
+import json
 import urllib.parse
 from datetime import timedelta, timezone
 
 # --- 設定 ---
 HISTORY_FILE = "CHUSPO_history.txt"
+STOCK_FILE = "CHUSPO_stock.json"
 
 def build_summary(title):
+    # 余計な装飾をカット
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
-    return f"{text}\n\n#dragons #中日スポーツ"
+    # ハッシュタグを #dragons #中日ドラゴンズ に変更
+    return f"{text}\n\n#dragons #中日ドラゴンズ"
 
 def get_chuspo_news():
     url = "https://www.chunichi.co.jp/chuspo/dragons"
@@ -25,19 +29,27 @@ def get_chuspo_news():
             history = [line.strip() for line in f.readlines()]
 
     stock = []
+    if os.path.exists(STOCK_FILE):
+        try:
+            with open(STOCK_FILE, "r", encoding="utf-8") as f:
+                stock = json.load(f)
+        except:
+            stock = []
+
     try:
         res = requests.get(url, headers=headers, timeout=20)
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
         all_links = soup.find_all('a', href=True)
-        new_entries = []
+        new_entries_for_history = []
         seen_hrefs = set()
 
         for a in all_links:
             href = a.get('href')
             if not re.search(r'/article/\d{6,}', href):
                 continue
+                
             full_url = urllib.parse.urljoin(url, href)
             if full_url in seen_hrefs: continue
             
@@ -48,18 +60,22 @@ def get_chuspo_news():
             if title not in history and full_url not in history:
                 summary_text = build_summary(title)
                 stock.insert(0, {"summary": summary_text, "url": full_url})
-                new_entries.extend([title, full_url])
+                new_entries_for_history.extend([title, full_url])
                 history.extend([title, full_url])
                 seen_hrefs.add(full_url)
 
-        if new_entries:
+        if new_entries_for_history:
             with open(HISTORY_FILE, "a", encoding="utf-8") as f:
-                for entry in new_entries: f.write(entry + "\n")
+                for entry in new_entries_for_history: f.write(entry + "\n")
+        
+        stock = stock[:30]
+        with open(STOCK_FILE, "w", encoding="utf-8") as f:
+            json.dump(stock, f, ensure_ascii=False, indent=4)
                 
     except Exception as e:
         print(f"Error: {e}")
     
-    return stock[:20]
+    return stock
 
 def create_html(news_list):
     JST = timezone(timedelta(hours=+9), 'JST')
@@ -86,26 +102,22 @@ def create_html(news_list):
             .card {{ 
                 background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; 
                 box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative;
-                transition: opacity 0.3s ease;
             }}
             .close-btn {{ 
                 position: absolute; top: 10px; right: 10px; color: #ccc; 
-                font-size: 20px; cursor: pointer; border: none; background: none;
+                font-size: 24px; cursor: pointer; border: none; background: none; width: 40px; height: 40px;
             }}
-            .summary-text {{ font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; padding-right: 20px; }}
+            .summary-text {{ font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; padding-right: 30px; }}
             .btn-group {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
             .btn {{ text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; }}
             .read-btn {{ background: #e7efff; color: #0044cc; }}
             .post-btn {{ background: #1d9bf0; color: white; }}
         </style>
         <script>
-            // カードを消す関数
             function removeCard(btn) {{
                 const card = btn.closest('.card');
-                card.style.opacity = '0';
-                setTimeout(() => {{ card.remove(); }}, 300);
+                card.remove();
             }}
-            // 更新ボタン（ブラウザの更新）
             function reloadPage() {{
                 location.reload();
             }}
