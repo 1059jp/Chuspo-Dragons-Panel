@@ -13,7 +13,7 @@ STOCK_FILE = "CHUSPO_stock.json"
 
 # --- セキュリティ設定（GitHub Actionsの標準機能を利用） ---
 # 自分のトークンを直接書き込む必要はもうありません
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "") 
+MY_TOKEN = os.environ.get("MY_GITHUB_TOKEN", "")
 OWNER = "1059jp"
 REPO = "Chuspo-Dragons-Panel"
 WORKFLOW_FILE = "main.yml" 
