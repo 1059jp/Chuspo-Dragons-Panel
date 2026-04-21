@@ -12,10 +12,9 @@ HISTORY_FILE = "CHUSPO_history.txt"
 STOCK_FILE = "CHUSPO_stock.json"
 
 # --- セキュリティ設定（GitHub Secretsから読み込み） ---
-# 公開リポジトリでも安全なように、直接書かずに環境変数から取得します
 MY_TOKEN = os.environ.get("MY_GITHUB_TOKEN", "")
-OWNER = "あなたのGitHubユーザー名" # ここだけ書き換えてください
-REPO = "あなたのリポジトリ名"   # ここだけ書き換えてください
+OWNER = "1059jp"  # あなたのユーザー名
+REPO = "Chuspo-Dragons-Panel"   # あなたのリポジトリ名
 WORKFLOW_FILE = "main.yml" 
 
 def build_summary(title):
@@ -158,7 +157,7 @@ def create_html(news_list):
                     }} else {{
                         alert("エラーが発生しました。設定（Secrets）を確認してください。");
                     }}
-                } catch (e) {{
+                }} catch (e) {{
                     alert("通信エラーが発生しました。");
                 }} finally {{
                     btn.innerText = originalText;
