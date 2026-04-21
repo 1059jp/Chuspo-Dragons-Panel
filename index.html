@@ -19,22 +19,26 @@
             .card { 
                 background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; 
                 box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative;
+                transition: opacity 0.3s ease;
             }
             .close-btn { 
                 position: absolute; top: 10px; right: 10px; color: #ccc; 
-                font-size: 24px; cursor: pointer; border: none; background: none; width: 40px; height: 40px;
+                font-size: 20px; cursor: pointer; border: none; background: none;
             }
-            .summary-text { font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; padding-right: 30px; }
+            .summary-text { font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; padding-right: 20px; }
             .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .btn { text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; }
             .read-btn { background: #e7efff; color: #0044cc; }
             .post-btn { background: #1d9bf0; color: white; }
         </style>
         <script>
+            // カードを消す関数
             function removeCard(btn) {
                 const card = btn.closest('.card');
-                card.remove();
+                card.style.opacity = '0';
+                setTimeout(() => { card.remove(); }, 300);
             }
+            // 更新ボタン（ブラウザの更新）
             function reloadPage() {
                 location.reload();
             }
@@ -42,7 +46,7 @@
     </head>
     <body>
         <div class="header">
-            <div style="font-weight:bold;">🐉 中スポ (04/22 01:08)</div>
+            <div style="font-weight:bold;">🐉 中スポ (04/22 01:12)</div>
             <button onclick="reloadPage()" class="refresh-btn">🔄 更新</button>
         </div>
         <div style="margin-top:15px;">
