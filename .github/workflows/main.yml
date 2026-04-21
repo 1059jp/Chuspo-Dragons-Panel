@@ -1,31 +1,43 @@
-name: Chuspo News Auto Panel  # ← ここがActionsタブでの表示名になります
+name: Update News
 
 on:
   schedule:
+    # 5分おきに設定（ただしGitHubの混雑状況により遅延します）
     - cron: '*/5 * * * *'
+  # これを追加することで、ブラウザのボタン（外部）からの起動を許可します
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write  # ファイルの書き込み権限を許可
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: Install dependencies
-        run: pip install requests beautifulsoup4
-      
-      - name: Run Python Script
-        run: python SHIN_chuspo.py  # ← ここを必ず「SHIN_chuspo.py」に合わせます！
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Commit and Push
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Update chuspo news" || true
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+
+      - name: Run Python script
+        env:
+          # GitHub Secretsに登録したトークンをPythonプログラムに渡します
+          MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+        run: python SHIN_chuspo.py
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          # index.html, stock.json, history.txt の変更をすべて保存
+          git add index.html CHUSPO_history.txt CHUSPO_stock.json
+          git commit -m "Update news and stock" || echo "No changes to commit"
           git push
