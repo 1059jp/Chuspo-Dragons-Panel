@@ -10,10 +10,6 @@ from datetime import timedelta, timezone
 # --- 設定 ---
 HISTORY_FILE = "CHUSPO_history.txt"
 STOCK_FILE = "CHUSPO_stock.json"
-
-# --- セキュリティ設定（GitHub Actionsの標準機能を利用） ---
-# 自分のトークンを直接書き込む必要はもうありません
-MY_TOKEN = os.environ.get("MY_GITHUB_TOKEN", "")
 OWNER = "1059jp"
 REPO = "Chuspo-Dragons-Panel"
 WORKFLOW_FILE = "main.yml" 
@@ -24,94 +20,93 @@ def build_summary(title):
 
 def get_chuspo_news():
     url = "https://www.chunichi.co.jp/chuspo/dragons"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
+    headers = {"User-Agent": "Mozilla/5.0"}
     history = []
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             history = [line.strip() for line in f.readlines()]
-
     stock = []
     if os.path.exists(STOCK_FILE):
         try:
             with open(STOCK_FILE, "r", encoding="utf-8") as f:
                 stock = json.load(f)
-        except:
-            stock = []
+        except: stock = []
 
     try:
         res = requests.get(url, headers=headers, timeout=20)
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
-
         all_links = soup.find_all('a', href=True)
-        new_entries_for_history = []
-        seen_hrefs = set()
-
+        new_entries = []
         for a in all_links:
             href = a.get('href')
-            if not re.search(r'/article/\d{6,}', href):
-                continue
-                
+            if not re.search(r'/article/\d{6,}', href): continue
             full_url = urllib.parse.urljoin(url, href)
-            if full_url in seen_hrefs: continue
-            
             title = a.get_text().strip()
-            if len(title) < 20: 
-                continue
+            if len(title) < 20 or title in history or full_url in history: continue
+            
+            summary_text = build_summary(title)
+            stock.insert(0, {"summary": summary_text, "url": full_url})
+            new_entries.extend([title, full_url])
+            history.extend([title, full_url])
 
-            if title not in history and full_url not in history:
-                summary_text = build_summary(title)
-                stock.insert(0, {"summary": summary_text, "url": full_url})
-                new_entries_for_history.extend([title, full_url])
-                history.extend([title, full_url])
-                seen_hrefs.add(full_url)
-
-        if new_entries_for_history:
+        if new_entries:
             with open(HISTORY_FILE, "a", encoding="utf-8") as f:
-                for entry in new_entries_for_history: f.write(entry + "\n")
+                for entry in new_entries: f.write(entry + "\n")
         
         stock = stock[:30]
         with open(STOCK_FILE, "w", encoding="utf-8") as f:
             json.dump(stock, f, ensure_ascii=False, indent=4)
-                
-    except Exception as e:
-        print(f"Error: {e}")
-    
+    except Exception as e: print(f"Error: {e}")
     return stock
 
 def create_html(news_list):
     JST = timezone(timedelta(hours=+9), 'JST')
     now = datetime.datetime.now(JST).strftime('%m/%d %H:%M')
     
-    # 【安全策】トークンをHTMLに書かず、ボタンが押された時にGitHub APIへ飛ばす方式に変更
+    # 【最重要】鍵を一切書き込まないJSコード
     js_code = """
-    function removeCard(btn) {
-        const card = btn.closest('.card');
-        card.remove();
-    }
-    function reloadPage() {
-        location.reload();
-    }
+    function removeCard(btn) { btn.closest('.card').remove(); }
+    function reloadPage() { location.reload(); }
 
     async function triggerSystemUpdate() {
-        if(!confirm("GitHubのシステムを強制起動して、最新ニュースを取りに行きますか？")) return;
+        // ブラウザの保存領域から鍵を取り出す（最初は空っぽ）
+        let token = localStorage.getItem('GH_TOKEN');
         
+        if(!token) {
+            token = prompt("【初回のみ】GitHubのトークンを入力してください。\\n(ブラウザに安全に保存され、コードには書き込まれません)");
+            if(token) localStorage.setItem('GH_TOKEN', token);
+        }
+        if(!token) return;
+
         const btn = document.querySelector('.system-btn');
-        const originalText = btn.innerText;
-        btn.innerText = "⏳ 起動中...";
+        btn.innerText = "⏳ 実行中...";
         btn.disabled = true;
 
-        // 直接Actionsページへ飛ばすか、あるいは特定のURLを叩く
-        // ここにトークンを書くと漏れるので、安全にActionsの実行ページへ誘導します
-        window.open('https://github.com/""" + OWNER + "/" + REPO + """/actions/workflows/""" + WORKFLOW_FILE + """', '_blank');
-        
-        alert("GitHubの画面が開きます。\\n『Run workflow』ボタンを押して更新してください。");
-        
-        btn.innerText = originalText;
-        btn.disabled = false;
+        try {
+            const response = await fetch('https://api.github.com/repos/""" + OWNER + "/" + REPO + """/actions/workflows/""" + WORKFLOW_FILE + """/dispatches', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({ ref: 'main' })
+            });
+
+            if (response.status === 204) {
+                alert("システムを起動しました！\\n約1分後に更新ボタンを押してください。");
+            } else if(response.status === 401) {
+                alert("鍵が無効です。入力をやり直してください。");
+                localStorage.removeItem('GH_TOKEN');
+            } else {
+                alert("エラーが発生しました。");
+            }
+        } catch (e) {
+            alert("通信失敗。ネット接続を確認してください。");
+        } finally {
+            btn.innerText = "🚀 システム更新";
+            btn.disabled = false;
+        }
     }
     """
     
@@ -129,32 +124,17 @@ def create_html(news_list):
                 position: sticky; top: 0; z-index: 1000; border-bottom: 3px solid #ffcc00;
                 display: flex; justify-content: space-between; align-items: center;
             }}
-            .refresh-btn {{ 
-                background: #ffcc00; color: #0044cc; border: none; padding: 8px 12px; 
-                border-radius: 20px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 14px;
-                margin-left: 5px;
-            }}
-            .system-btn {{ 
-                background: #ff4444; color: white; border: none; padding: 8px 12px; 
-                border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px;
-            }}
-            .card {{ 
-                background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; 
-                box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative;
-            }}
-            .close-btn {{ 
-                position: absolute; top: 10px; right: 10px; color: #ccc; 
-                font-size: 24px; cursor: pointer; border: none; background: none; width: 40px; height: 40px;
-            }}
-            .summary-text {{ font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; padding-right: 30px; }}
+            .refresh-btn {{ background: #ffcc00; color: #0044cc; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }}
+            .system-btn {{ background: #ff4444; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }}
+            .card {{ background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; }}
+            .close-btn {{ position: absolute; top: 10px; right: 10px; color: #ccc; font-size: 24px; cursor: pointer; border: none; background: none; }}
+            .summary-text {{ font-weight: bold; font-size: 1.1em; margin-bottom: 15px; color: #1a1a1a; }}
             .btn-group {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
             .btn {{ text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; }}
             .read-btn {{ background: #e7efff; color: #0044cc; }}
             .post-btn {{ background: #1d9bf0; color: white; }}
         </style>
-        <script>
-            {js_code}
-        </script>
+        <script>{js_code}</script>
     </head>
     <body>
         <div class="header">
@@ -178,11 +158,9 @@ def create_html(news_list):
                 </div>
             </div>
         """
-    if not news_list:
-        html_content += "<p style='text-align:center; padding:50px; color:#666;'>新着ニュースはありません。</p>"
+    if not news_list: html_content += "<p style='text-align:center;'>新着なし</p>"
     html_content += "</div></body></html>"
-    with open("index.html", "w", encoding="utf-8") as f:
-        f.write(html_content)
+    with open("index.html", "w", encoding="utf-8") as f: f.write(html_content)
 
 if __name__ == "__main__":
     news = get_chuspo_news()
