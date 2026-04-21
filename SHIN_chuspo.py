@@ -3,22 +3,23 @@ from bs4 import BeautifulSoup
 import datetime
 import os
 import re
-from datetime import timedelta, timezone
 import json
 import urllib.parse
+from datetime import timedelta, timezone
 
 # --- 設定 ---
 HISTORY_FILE = "CHUSPO_history.txt"
 STOCK_FILE = "CHUSPO_stock.json"
 
 def build_summary(title):
+    # 余計な装飾をカット
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
     return f"{text}\n\n#dragons #中日スポーツ"
 
 def get_chuspo_news():
     url = "https://www.chunichi.co.jp/chuspo/dragons"
     headers = {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 
     history = []
@@ -28,34 +29,40 @@ def get_chuspo_news():
 
     stock = []
     try:
-        res = requests.get(url, headers=headers, timeout=15)
+        res = requests.get(url, headers=headers, timeout=20)
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # 記事リンク（数字8桁以上を含むもの）を抽出
-        articles = soup.find_all('a', href=re.compile(r'/chuspo/article/dragons/\d+'))
-
+        # --- 【最強の狙い撃ちルール】 ---
+        # 1. ページ内の全リンクから、中日スポーツの記事形式（/article/数字）をすべて探す
+        all_links = soup.find_all('a', href=True)
+        
         new_entries = []
         seen_hrefs = set()
 
-        for a_tag in articles:
-            href = urllib.parse.urljoin(url, a_tag.get('href', ''))
-            if href in seen_hrefs: continue
+        for a in all_links:
+            href = a.get('href')
+            # 送っていただいた例の形式「/article/8桁前後の数字」を正規表現で探す
+            if not re.search(r'/article/\d{6,}', href):
+                continue
+                
+            full_url = urllib.parse.urljoin(url, href)
+            if full_url in seen_hrefs: continue
             
-            title = a_tag.get_text().strip()
-            # 18文字未満はメニューや広告とみなしてカット
-            if len(title) < 18: continue 
+            # 見出しを取得（aタグの中身、または直近のテキスト）
+            title = a.get_text().strip()
+            
+            # 短すぎる文字（「もっと見る」やメニュー）を徹底排除
+            if len(title) < 20: 
+                continue
 
-            # --- 【修正：24時間制限の撤廃】 ---
-            # 特定の日付チェックをあえてせず、サイト上の「最新リスト」にあるものは
-            # すべて「新着」として扱うようにしました。
-            
-            if title not in history and href not in history:
+            # 重複チェック
+            if title not in history and full_url not in history:
                 summary_text = build_summary(title)
-                stock.insert(0, {"summary": summary_text, "url": href})
-                new_entries.extend([title, href])
-                history.extend([title, href])
-                seen_hrefs.add(href)
+                stock.insert(0, {"summary": summary_text, "url": full_url})
+                new_entries.extend([title, full_url])
+                history.extend([title, full_url])
+                seen_hrefs.add(full_url)
 
         if new_entries:
             with open(HISTORY_FILE, "a", encoding="utf-8") as f:
@@ -64,7 +71,6 @@ def get_chuspo_news():
     except Exception as e:
         print(f"Error: {e}")
     
-    # 常に最新20件をストックして返す
     return stock[:20]
 
 def create_html(news_list):
@@ -79,7 +85,7 @@ def create_html(news_list):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>中スポ ドラゴンズ速報</title>
         <style>
-            body {{ font-family: -apple-system, sans-serif; background: #f0f4f8; padding: 10px; margin: 0; }}
+            body {{ font-family: sans-serif; background: #f0f4f8; padding: 10px; margin: 0; }}
             .header {{ background:#0044cc; color:white; padding:15px; text-align:center; position: sticky; top: 0; z-index: 1000; border-bottom: 3px solid #ffcc00; }}
             .card {{ background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
             .summary-text {{ font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; }}
@@ -105,7 +111,7 @@ def create_html(news_list):
             </div>
         """
     if not news_list:
-        html_content += "<p style='text-align:center; padding:50px; color:#666;'>新着ニュースを読み込み中...</p>"
+        html_content += "<p style='text-align:center; padding:50px; color:#666;'>新着ニュースはありません。</p>"
     html_content += "</div></body></html>"
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
