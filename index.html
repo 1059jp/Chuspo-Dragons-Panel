@@ -6,96 +6,17 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>中スポ ドラゴンズ速報</title>
         <style>
-            body { font-family: sans-serif; background: #eef2f7; padding: 10px; margin: 0; }
-            .header { background:#0044cc; color:white; padding:15px; text-align:center; position: sticky; top: 0; z-index: 1000; }
-            .card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #0044cc; }
-            .summary-text { font-weight: bold; margin-bottom: 15px; line-height: 1.4; }
-            .btn-group { display: flex; gap: 8px; }
-            .btn { flex: 1; text-align: center; text-decoration: none; padding: 12px; border-radius: 5px; font-weight: bold; font-size: 0.9em; }
-            .read-btn { background: #f0f2f5; color: #0044cc; border: 1px solid #0044cc; }
+            body { font-family: -apple-system, sans-serif; background: #f0f4f8; padding: 10px; margin: 0; }
+            .header { background:#0044cc; color:white; padding:15px; text-align:center; position: sticky; top: 0; z-index: 1000; border-bottom: 3px solid #ffcc00; }
+            .card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            .summary-text { font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; }
+            .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .btn { text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; }
+            .read-btn { background: #e7efff; color: #0044cc; }
             .post-btn { background: #1d9bf0; color: white; }
         </style>
     </head>
     <body>
-        <div class="header"><h2>📰 中スポ速報 (04/21 23:55)</h2></div>
-    
-            <div class="card">
-                <div class="summary-text">当サイトへのリンクについて
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://www.chunichi.co.jp/policy/link/" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E5%BD%93%E3%82%B5%E3%82%A4%E3%83%88%E3%81%B8%E3%81%AE%E3%83%AA%E3%83%B3%E3%82%AF%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//www.chunichi.co.jp/policy/link/" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        
-            <div class="card">
-                <div class="summary-text">中日新聞フォトサービス
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://www.chunichi.co.jp/info/photo" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E4%B8%AD%E6%97%A5%E6%96%B0%E8%81%9E%E3%83%95%E3%82%A9%E3%83%88%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//www.chunichi.co.jp/info/photo" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        
-            <div class="card">
-                <div class="summary-text">中日ドラゴンズ球団公式サイト
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://dragons.jp/" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E4%B8%AD%E6%97%A5%E3%83%89%E3%83%A9%E3%82%B4%E3%83%B3%E3%82%BA%E7%90%83%E5%9B%A3%E5%85%AC%E5%BC%8F%E3%82%B5%E3%82%A4%E3%83%88%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//dragons.jp/" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        
-            <div class="card">
-                <div class="summary-text">ご意見・お問い合わせ
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://plus.chunichi.co.jp/entry/index.php?form_id=l9cAjvC7BLPiiUjsrr%2FJpA%3D%3D&pager_flg=0&mem_chk=0&sort_flg=&comment_id=0&category_id=0" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E3%81%94%E6%84%8F%E8%A6%8B%E3%83%BB%E3%81%8A%E5%95%8F%E3%81%84%E5%90%88%E3%82%8F%E3%81%9B%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//plus.chunichi.co.jp/entry/index.php%3Fform_id%3Dl9cAjvC7BLPiiUjsrr%252FJpA%253D%253D%26pager_flg%3D0%26mem_chk%3D0%26sort_flg%3D%26comment_id%3D0%26category_id%3D0" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        
-            <div class="card">
-                <div class="summary-text">中日ドラゴンズ公式ファンクラブ
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://dragons.jp/fanclub/" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E4%B8%AD%E6%97%A5%E3%83%89%E3%83%A9%E3%82%B4%E3%83%B3%E3%82%BA%E5%85%AC%E5%BC%8F%E3%83%95%E3%82%A1%E3%83%B3%E3%82%AF%E3%83%A9%E3%83%96%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//dragons.jp/fanclub/" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        
-            <div class="card">
-                <div class="summary-text">スマホ向け情報サービス
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://www.chunichi.co.jp/info/mobile/" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E3%82%B9%E3%83%9E%E3%83%9B%E5%90%91%E3%81%91%E6%83%85%E5%A0%B1%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//www.chunichi.co.jp/info/mobile/" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        
-            <div class="card">
-                <div class="summary-text">中部の大学・教育情報
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://edu.chunichi.co.jp/" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E4%B8%AD%E9%83%A8%E3%81%AE%E5%A4%A7%E5%AD%A6%E3%83%BB%E6%95%99%E8%82%B2%E6%83%85%E5%A0%B1%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//edu.chunichi.co.jp/" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        
-            <div class="card">
-                <div class="summary-text">阪神―中日　大野、村松
-
-#dragons #中日スポーツ</div>
-                <div class="btn-group">
-                    <a href="https://www.chunichi.co.jp/article_photo_chuspo/list?article_id=1239592&pid=7054376" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="https://twitter.com/intent/tweet?text=%E9%98%AA%E7%A5%9E%E2%80%95%E4%B8%AD%E6%97%A5%E3%80%80%E5%A4%A7%E9%87%8E%E3%80%81%E6%9D%91%E6%9D%BE%0A%0A%23dragons%20%23%E4%B8%AD%E6%97%A5%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%0Ahttps%3A//www.chunichi.co.jp/article_photo_chuspo/list%3Farticle_id%3D1239592%26pid%3D7054376" target="_blank" class="btn post-btn">𝕏 ポスト</a>
-                </div>
-            </div>
-        </body></html>
+        <div class="header"><h2 style="margin:0;">🐉 中スポ速報 (04/22 00:02)</h2></div>
+        <div style="margin-top:15px;">
+    <p style='text-align:center; padding:50px; color:#666;'>現在、新しいニュースはありません。</p></div></body></html>
