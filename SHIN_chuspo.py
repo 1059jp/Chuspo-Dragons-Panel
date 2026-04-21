@@ -3,16 +3,13 @@ from bs4 import BeautifulSoup
 import datetime
 import os
 import re
-import json
 import urllib.parse
 from datetime import timedelta, timezone
 
 # --- 設定 ---
 HISTORY_FILE = "CHUSPO_history.txt"
-STOCK_FILE = "CHUSPO_stock.json"
 
 def build_summary(title):
-    # 余計な装飾をカット
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
     return f"{text}\n\n#dragons #中日スポーツ"
 
@@ -33,30 +30,21 @@ def get_chuspo_news():
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # --- 【最強の狙い撃ちルール】 ---
-        # 1. ページ内の全リンクから、中日スポーツの記事形式（/article/数字）をすべて探す
         all_links = soup.find_all('a', href=True)
-        
         new_entries = []
         seen_hrefs = set()
 
         for a in all_links:
             href = a.get('href')
-            # 送っていただいた例の形式「/article/8桁前後の数字」を正規表現で探す
             if not re.search(r'/article/\d{6,}', href):
                 continue
-                
             full_url = urllib.parse.urljoin(url, href)
             if full_url in seen_hrefs: continue
             
-            # 見出しを取得（aタグの中身、または直近のテキスト）
             title = a.get_text().strip()
-            
-            # 短すぎる文字（「もっと見る」やメニュー）を徹底排除
             if len(title) < 20: 
                 continue
 
-            # 重複チェック
             if title not in history and full_url not in history:
                 summary_text = build_summary(title)
                 stock.insert(0, {"summary": summary_text, "url": full_url})
@@ -86,27 +74,59 @@ def create_html(news_list):
         <title>中スポ ドラゴンズ速報</title>
         <style>
             body {{ font-family: sans-serif; background: #f0f4f8; padding: 10px; margin: 0; }}
-            .header {{ background:#0044cc; color:white; padding:15px; text-align:center; position: sticky; top: 0; z-index: 1000; border-bottom: 3px solid #ffcc00; }}
-            .card {{ background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
-            .summary-text {{ font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; }}
+            .header {{ 
+                background:#0044cc; color:white; padding:15px; text-align:center; 
+                position: sticky; top: 0; z-index: 1000; border-bottom: 3px solid #ffcc00;
+                display: flex; justify-content: space-between; align-items: center;
+            }}
+            .refresh-btn {{ 
+                background: #ffcc00; color: #0044cc; border: none; padding: 8px 12px; 
+                border-radius: 20px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 14px;
+            }}
+            .card {{ 
+                background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative;
+                transition: opacity 0.3s ease;
+            }}
+            .close-btn {{ 
+                position: absolute; top: 10px; right: 10px; color: #ccc; 
+                font-size: 20px; cursor: pointer; border: none; background: none;
+            }}
+            .summary-text {{ font-weight: bold; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; color: #1a1a1a; padding-right: 20px; }}
             .btn-group {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
             .btn {{ text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; }}
             .read-btn {{ background: #e7efff; color: #0044cc; }}
             .post-btn {{ background: #1d9bf0; color: white; }}
         </style>
+        <script>
+            // カードを消す関数
+            function removeCard(btn) {{
+                const card = btn.closest('.card');
+                card.style.opacity = '0';
+                setTimeout(() => {{ card.remove(); }}, 300);
+            }}
+            // 更新ボタン（ブラウザの更新）
+            function reloadPage() {{
+                location.reload();
+            }}
+        </script>
     </head>
     <body>
-        <div class="header"><h2 style="margin:0;">🐉 中スポ速報 ({now})</h2></div>
+        <div class="header">
+            <div style="font-weight:bold;">🐉 中スポ ({now})</div>
+            <button onclick="reloadPage()" class="refresh-btn">🔄 更新</button>
+        </div>
         <div style="margin-top:15px;">
     """
     for item in news_list:
         tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote(item['summary'] + chr(10) + item['url'])}"
         html_content += f"""
             <div class="card">
+                <button class="close-btn" onclick="removeCard(this)">✕</button>
                 <div class="summary-text">{item['summary']}</div>
                 <div class="btn-group">
                     <a href="{item['url']}" target="_blank" class="btn read-btn">📰 読む</a>
-                    <a href="{tweet_url}" target="_blank" class="btn post-btn">𝕏 ポスト</a>
+                    <a href="{tweet_url}" target="_blank" class="btn post-btn" onclick="removeCard(this)">𝕏 ポスト</a>
                 </div>
             </div>
         """
