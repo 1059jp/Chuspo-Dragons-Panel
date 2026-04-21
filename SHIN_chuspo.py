@@ -12,7 +12,6 @@ HISTORY_FILE = "CHUSPO_history.txt"
 STOCK_FILE = "CHUSPO_stock.json"
 
 def build_summary(title):
-    # 余計な装飾をカット
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
     return f"{text}\n\n#dragons #中日スポーツ"
 
@@ -21,6 +20,13 @@ def get_chuspo_news():
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
+
+    # --- 【日付フィルターの準備】 ---
+    JST = timezone(timedelta(hours=+9), 'JST')
+    now = datetime.datetime.now(JST)
+    today_str = now.strftime('%-m/%-d')    # 例: 4/22
+    yesterday = now - timedelta(days=1)
+    yesterday_str = yesterday.strftime('%-m/%-d') # 例: 4/21
 
     history = []
     if os.path.exists(HISTORY_FILE):
@@ -33,30 +39,36 @@ def get_chuspo_news():
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # --- 【最強の狙い撃ちルール】 ---
-        # 1. ページ内の全リンクから、中日スポーツの記事形式（/article/数字）をすべて探す
-        all_links = soup.find_all('a', href=True)
+        # 記事カードの塊を特定してループ
+        # 中日スポーツは各記事が 'item' などのクラスにまとまっていることが多いです
+        items = soup.find_all(['div', 'li'], class_=re.compile(r'item|card'))
         
         new_entries = []
         seen_hrefs = set()
 
-        for a in all_links:
-            href = a.get('href')
-            # 送っていただいた例の形式「/article/8桁前後の数字」を正規表現で探す
-            if not re.search(r'/article/\d{6,}', href):
+        for item in items:
+            # 日付テキストを探す (例: "4/22 06:00" など)
+            date_tag = item.find(class_=re.compile(r'date|time'))
+            date_text = date_tag.get_text() if date_tag else ""
+
+            # --- 【日付チェック】 ---
+            # 「今日」か「昨日」の日付が含まれていない場合は無視する
+            # ただし、日付タグがない場合は一旦通してURLで判断する
+            if date_text and (today_str not in date_text and yesterday_str not in date_text):
                 continue
+
+            a = item.find('a', href=True)
+            if not a: continue
+            
+            href = a.get('href')
+            if not re.search(r'/article/\d{6,}', href): continue
                 
             full_url = urllib.parse.urljoin(url, href)
             if full_url in seen_hrefs: continue
             
-            # 見出しを取得（aタグの中身、または直近のテキスト）
             title = a.get_text().strip()
-            
-            # 短すぎる文字（「もっと見る」やメニュー）を徹底排除
-            if len(title) < 20: 
-                continue
+            if len(title) < 20: continue
 
-            # 重複チェック
             if title not in history and full_url not in history:
                 summary_text = build_summary(title)
                 stock.insert(0, {"summary": summary_text, "url": full_url})
@@ -73,6 +85,7 @@ def get_chuspo_news():
     
     return stock[:20]
 
+# (create_html部分は変更なし)
 def create_html(news_list):
     JST = timezone(timedelta(hours=+9), 'JST')
     now = datetime.datetime.now(JST).strftime('%m/%d %H:%M')
@@ -111,7 +124,7 @@ def create_html(news_list):
             </div>
         """
     if not news_list:
-        html_content += "<p style='text-align:center; padding:50px; color:#666;'>新着ニュースはありません。</p>"
+        html_content += "<p style='text-align:center; padding:50px; color:#666;'>本日の新着ニュースはありません。</p>"
     html_content += "</div></body></html>"
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
