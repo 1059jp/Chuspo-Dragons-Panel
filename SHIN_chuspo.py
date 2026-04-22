@@ -9,73 +9,70 @@ from datetime import timedelta, timezone
 
 # --- 設定 ---
 HISTORY_FILE = "CHUSPO_history.txt"
-# STOCK_FILE は廃止しました（貯金箱を使わないため）
+STOCK_FILE = "CHUSPO_stock.json"
 OWNER = "1059jp"
 REPO = "Chuspo-Dragons-Panel"
 WORKFLOW_FILE = "main.yml" 
 
 def build_summary(title):
-    # タイトルから余計な装飾を消してハッシュタグをつける（変更なし）
     text = re.sub(r'\(.*?\)|（.*?）|【.*?】', '', title).strip()
     return f"{text}\n\n#dragons #中日ドラゴンズ"
 
 def get_chuspo_news():
     url = "https://www.chunichi.co.jp/chuspo/dragons"
     headers = {"User-Agent": "Mozilla/5.0"}
-    
-    # 重複防止用の履歴だけ読み込む（変更なし）
     history = []
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             history = [line.strip() for line in f.readlines()]
-
-    current_news = [] # 今回、中スポのサイトで見つけたニュースを入れるリスト
+    stock = []
+    if os.path.exists(STOCK_FILE):
+        try:
+            with open(STOCK_FILE, "r", encoding="utf-8") as f:
+                stock = json.load(f)
+        except: stock = []
 
     try:
         res = requests.get(url, headers=headers, timeout=20)
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
         all_links = soup.find_all('a', href=True)
-        
-        new_history_entries = []
+        new_entries = []
         for a in all_links:
             href = a.get('href')
             if not re.search(r'/article/\d{6,}', href): continue
             full_url = urllib.parse.urljoin(url, href)
             title = a.get_text().strip()
-            
-            # 20文字未満や、すでに取得済みの古い記事は飛ばす
-            if len(title) < 20: continue
+            if len(title) < 20 or title in history or full_url in history: continue
             
             summary_text = build_summary(title)
-            # 貯金箱（Stock）に貯めず、今見つけたニュースをそのままリストに入れる
-            current_news.append({"summary": summary_text, "url": full_url})
-            
-            # 新しい記事なら履歴にメモする
-            if title not in history and full_url not in history:
-                new_history_entries.extend([title, full_url])
+            stock.insert(0, {"summary": summary_text, "url": full_url})
+            new_entries.extend([title, full_url])
+            history.extend([title, full_url])
 
-        # 新着があれば履歴ファイルを更新
-        if new_history_entries:
+        if new_entries:
             with open(HISTORY_FILE, "a", encoding="utf-8") as f:
-                for entry in new_history_entries: f.write(entry + "\n")
-                
-    except Exception as e: 
-        print(f"Error: {e}")
+                for entry in new_entries: f.write(entry + "\n")
         
-    return current_news # 「今の中スポ」の最新ニュースだけを返す
+        stock = stock[:30]
+        with open(STOCK_FILE, "w", encoding="utf-8") as f:
+            json.dump(stock, f, ensure_ascii=False, indent=4)
+    except Exception as e: print(f"Error: {e}")
+    return stock
 
 def create_html(news_list):
     JST = timezone(timedelta(hours=+9), 'JST')
     now = datetime.datetime.now(JST).strftime('%m/%d %H:%M')
     
-    # 【セキュリティ】スマホのブラウザに鍵を覚えさせる仕組み（変更なし）
+    # 【最重要】鍵を一切書き込まないJSコード
     js_code = """
     function removeCard(btn) { btn.closest('.card').remove(); }
     function reloadPage() { location.reload(); }
 
     async function triggerSystemUpdate() {
+        // ブラウザの保存領域から鍵を取り出す（最初は空っぽ）
         let token = localStorage.getItem('GH_TOKEN');
+        
         if(!token) {
             token = prompt("【初回のみ】GitHubのトークンを入力してください。\\n(ブラウザに安全に保存され、コードには書き込まれません)");
             if(token) localStorage.setItem('GH_TOKEN', token);
@@ -113,7 +110,6 @@ def create_html(news_list):
     }
     """
     
-    # HTMLの見た目（デザインも一切変更なし）
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ja">
@@ -164,9 +160,7 @@ def create_html(news_list):
         """
     if not news_list: html_content += "<p style='text-align:center;'>新着なし</p>"
     html_content += "</div></body></html>"
-    
-    with open("index.html", "w", encoding="utf-8") as f: 
-        f.write(html_content)
+    with open("index.html", "w", encoding="utf-8") as f: f.write(html_content)
 
 if __name__ == "__main__":
     news = get_chuspo_news()
