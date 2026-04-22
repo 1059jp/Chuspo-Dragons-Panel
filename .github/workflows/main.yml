@@ -1,10 +1,6 @@
 name: Update News
 
 on:
-  schedule:
-    # 5分おきに設定（GitHubの混雑状況により遅延します）
-    - cron: '*/5 * * * *'
-  # これを追加することで、ブラウザのボタン（外部）からの起動を許可します
   workflow_dispatch:
 
 jobs:
